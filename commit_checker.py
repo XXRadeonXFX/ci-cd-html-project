@@ -1,12 +1,12 @@
 import os
 import subprocess
-import platform  # Added to detect OS
+import platform
 
 # Configuration
-REPO_PATH = os.getcwd()  # Set to the current working directory
-LAST_COMMIT_FILE = os.path.join(REPO_PATH, "last_commit.txt")  # Store commit hash in current dir
-SCRIPT_SH = os.path.join(REPO_PATH, "run_script.sh")  # Bash script
-SCRIPT_PS = os.path.join(REPO_PATH, "run_script.ps1")  # PowerShell script
+REPO_PATH = os.getcwd()  # Get the current working directory
+LAST_COMMIT_FILE = os.path.join(REPO_PATH, "last_commit.txt")  # File to store the last commit hash
+SCRIPT_SH = os.path.join(REPO_PATH, "run_script.sh")  # Bash script path
+SCRIPT_PS = os.path.join(REPO_PATH, "run_script.ps1")  # PowerShell script path
 
 def get_latest_commit():
     """Fetches the latest commit hash using git log."""
@@ -29,43 +29,55 @@ def update_stored_commit(commit_hash):
     with open(LAST_COMMIT_FILE, "w") as file:
         file.write(commit_hash)
 
+def is_wsl():
+    """Detect if running inside WSL."""
+    return "microsoft" in platform.uname().release.lower()
+
 def run_script():
-    """Attempts to run the Bash script; falls back to PowerShell if it fails."""
-    script_sh_path = SCRIPT_SH.replace("\\", "/")  # Convert Windows path to Unix-compatible format
+    """Runs the appropriate script based on the environment (WSL or Windows)."""
+    if is_wsl():
+        return run_bash_script()
+    else:
+        return run_powershell_script()
 
+def run_bash_script():
+    """Runs the Bash script inside WSL."""
     if os.path.exists(SCRIPT_SH):
-        # Skip chmod on Windows
-        if platform.system() != "Windows":
-            subprocess.run(["chmod", "+x", script_sh_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
         try:
-            # Run Bash script
-            subprocess.run(["bash", script_sh_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+            subprocess.run(["chmod", "+x", SCRIPT_SH], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["/bin/bash", SCRIPT_SH], check=True)
             print("✅ Bash script executed successfully.")
             return True
-        except subprocess.CalledProcessError:
-            pass  # Do not print failure message yet
-
-    # Try running PowerShell script if Bash script fails
-    return run_powershell_script()
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Bash script failed: {e}")
+            return False
+    else:
+        print("❌ Bash script not found.")
+        return False
 
 def run_powershell_script():
-    """Attempts to run the PowerShell script."""
+    """Runs the PowerShell script in Windows."""
+    powershell_cmd = "pwsh" if shutil.which("pwsh") else "powershell"
+
     if os.path.exists(SCRIPT_PS):
         try:
-            subprocess.run(["powershell", "-ExecutionPolicy", "Bypass", "-File", SCRIPT_PS],
+            subprocess.run([powershell_cmd, "-ExecutionPolicy", "Bypass", "-File", SCRIPT_PS],
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
             print("✅ PowerShell script executed successfully.")
             return True
-        except subprocess.CalledProcessError:
-            pass  # Do not print failure message yet
-
-    return False  # Neither script succeeded
+        except subprocess.CalledProcessError as e:
+            print(f"❌ PowerShell script failed: {e}")
+            return False
+    else:
+        print("❌ PowerShell script not found.")
+        return False
 
 def main():
+    """Main execution logic."""
     latest_commit = get_latest_commit()
     if latest_commit is None:
-        return  # Exit if unable to fetch the latest commit
+        print("❌ Failed to fetch latest commit.")
+        return
 
     stored_commit = get_stored_commit()
 
