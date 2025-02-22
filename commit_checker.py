@@ -1,10 +1,28 @@
 import os
 import subprocess
 import platform
+import shutil
+
+# Function to find the repo dynamically
+def find_repo(repo_name):
+    """Find the repository path dynamically by searching in the home directory."""
+    home_dir = os.path.expanduser("~")  # Get the user's home directory
+    for root, dirs, _ in os.walk(home_dir):
+        if repo_name in dirs:
+            return os.path.join(root, repo_name)  # Return the first match
+    return None  # Return None if not found
 
 # Configuration
-REPO_PATH = os.getcwd()  # Get the current working directory
-LAST_COMMIT_FILE = os.path.join(REPO_PATH, "last_commit.txt")  # File to store the last commit hash
+REPO_NAME = "ci-cd-html-project"
+REPO_PATH = find_repo(REPO_NAME)  # Find repo dynamically
+
+if REPO_PATH is None:
+    print(f"❌ Error: Repository '{REPO_NAME}' not found. Exiting.")
+    exit(1)
+
+print(f"✅ Repository found at: {REPO_PATH}")
+
+LAST_COMMIT_FILE = os.path.join(REPO_PATH, "last_commit.txt")  # File to store last commit hash
 SCRIPT_SH = os.path.join(REPO_PATH, "run_script.sh")  # Bash script path
 SCRIPT_PS = os.path.join(REPO_PATH, "run_script.ps1")  # PowerShell script path
 
