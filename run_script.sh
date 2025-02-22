@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define source and destination paths
-SRC_FILE="/var/www/html/index.html"
-DEST_FILE="$(pwd)/index.html"
+DEST_FILE="/var/www/html/index.html"
+SRC_FILE="$(pwd)/index.html"
 
 # Check if the source file exists
 if [ ! -f "$SRC_FILE" ]; then
